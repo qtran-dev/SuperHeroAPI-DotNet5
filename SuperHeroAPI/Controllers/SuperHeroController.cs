@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SuperHeroAPI.Data;
+using SuperHeroAPI.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,23 +15,28 @@ namespace SuperHeroAPI.Controllers
     [ApiController]
     public class SuperHeroController : ControllerBase
     {
-        private readonly DataContext _context;
+        private readonly ISuperHeroRepo _repo;
+        public IMapper _mapper { get; }
 
-        public SuperHeroController(DataContext context)
+
+        public SuperHeroController(ISuperHeroRepo repo, IMapper mapper)
         {
-            this._context = context;
+            _repo = repo;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<SuperHero>>> Get()
+        public async Task<ActionResult<List<SuperHero>>> GetAll()
         {
-            return Ok(await _context.SuperHeros.ToListAsync());
+            var heroes = await _repo.GetAllSuperHeroes();
+
+            return Ok(_mapper.Map<List<SuperHeroReadDTO>>(heroes));
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<SuperHero>> Get(int id)
         {
-            var hero = await _context.SuperHeros.FindAsync(id);
+            var hero = await _repo.GetSuperHero(id);
             
             if (hero == null)
             {
@@ -37,53 +44,51 @@ namespace SuperHeroAPI.Controllers
             }
             else
             {
-                return Ok(hero);
+                return Ok(_mapper.Map<SuperHeroReadDTO>(hero));
             }
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<List<SuperHero>>> AddHero(SuperHero hero)
-        {
-            _context.SuperHeros.Add(hero);
-            await _context.SaveChangesAsync();
-
-            return Ok(await _context.SuperHeros.ToListAsync());
         }
 
         [HttpPut]
-        public async Task<ActionResult<List<SuperHero>>> UpdateHero(SuperHero request)
+        public async Task<ActionResult<List<SuperHero>>> Update(SuperHero request)
         {
-            var dbHero = await _context.SuperHeros.FindAsync(request.Id);
+            var hero = await _repo.GetSuperHero(request.Id);
 
-            if (dbHero == null)
+            if (hero != null)
+            {
+                var updatedHero = await _repo.UpdateSuperHero(request);
+
+                return Ok(_mapper.Map<SuperHeroReadDTO>(updatedHero));
+            }
+            else
             {
                 return BadRequest("Hero not found");
             }
 
-            dbHero.Name = request.Name;
-            dbHero.FirstName = request.FirstName;
-            dbHero.LastName = request.LastName;
-            dbHero.Place = request.Place;
+        }
 
-            await _context.SaveChangesAsync();
+        [HttpPost]
+        public async Task<ActionResult<List<SuperHero>>> Create(SuperHero request)
+        {
+            var heroes = await _repo.CreateSuperHero(request);
 
-            return Ok(await _context.SuperHeros.ToListAsync());
+            return Ok(_mapper.Map<List<SuperHeroReadDTO>>(heroes));
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult<SuperHero>> Delete(int id)
+        public async Task<ActionResult<List<SuperHero>>> Delete(int id)
         {
-            var dbHero = await _context.SuperHeros.FindAsync(id);
+            var hero = await _repo.GetSuperHero(id);
 
-            if (dbHero == null)
+            if (hero != null)
+            {
+                var heroes = await _repo.DeleteSuperHero(hero);
+                return Ok(_mapper.Map<List<SuperHeroReadDTO>>(heroes));
+            }
             {
                 return BadRequest("Hero not found");
             }
-
-            _context.SuperHeros.Remove(dbHero);
-            await _context.SaveChangesAsync();
-
-            return Ok(await _context.SuperHeros.ToListAsync());
         }
+
+
     }
 }
