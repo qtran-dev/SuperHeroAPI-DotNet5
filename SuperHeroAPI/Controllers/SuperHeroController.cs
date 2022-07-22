@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SuperHeroAPI.Data;
 using SuperHeroAPI.DTOs;
+using SuperHeroAPI.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace SuperHeroAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     public class SuperHeroController : ControllerBase
     {
@@ -26,30 +27,46 @@ namespace SuperHeroAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<SuperHero>>> GetAll()
-        {
-            var heroes = await _repo.GetAllSuperHeroes();
+        public async Task<ActionResult<List<SuperHeroReadDTO>>> GetAll()
+        { 
+            var heroes = await _repo.GetAllSuperHeroes(); 
 
-            return Ok(_mapper.Map<List<SuperHeroReadDTO>>(heroes));
+            return _mapper.Map<List<SuperHeroReadDTO>>(heroes);
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<SuperHero>> Get(int id)
+        public async Task<ActionResult<SuperHeroReadDTO>> Get(int id)
         {
             var hero = await _repo.GetSuperHero(id);
             
             if (hero == null)
             {
-                return BadRequest("Hero not found");
+                return NotFound("Hero Not Found");
             }
             else
             {
-                return Ok(_mapper.Map<SuperHeroReadDTO>(hero));
+                var rtn = _mapper.Map<SuperHeroReadDTO>(hero);
+                return rtn;
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<SuperHeroDTO>> GetPrivileged(int id)
+        {
+            var hero = await _repo.GetSuperHero(id);
+
+            if (hero == null)
+            {
+                return NotFound("Hero Not Found");
+            }
+            else
+            {
+                return _mapper.Map<SuperHeroDTO>(hero);
             }
         }
 
         [HttpPut]
-        public async Task<ActionResult<List<SuperHero>>> Update(SuperHero request)
+        public async Task<ActionResult<SuperHeroReadDTO>> Update(SuperHero request)
         {
             var hero = await _repo.GetSuperHero(request.Id);
 
@@ -57,7 +74,7 @@ namespace SuperHeroAPI.Controllers
             {
                 var updatedHero = await _repo.UpdateSuperHero(request);
 
-                return Ok(_mapper.Map<SuperHeroReadDTO>(updatedHero));
+                return _mapper.Map<SuperHeroReadDTO>(updatedHero);
             }
             else
             {
@@ -67,22 +84,22 @@ namespace SuperHeroAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<List<SuperHero>>> Create(SuperHero request)
+        public async Task<ActionResult<List<SuperHeroReadDTO>>> Create(SuperHero request)
         {
             var heroes = await _repo.CreateSuperHero(request);
 
-            return Ok(_mapper.Map<List<SuperHeroReadDTO>>(heroes));
+            return _mapper.Map<List<SuperHeroReadDTO>>(heroes);
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult<List<SuperHero>>> Delete(int id)
+        public async Task<ActionResult<List<SuperHeroReadDTO>>> Delete(int id)
         {
             var hero = await _repo.GetSuperHero(id);
 
             if (hero != null)
             {
                 var heroes = await _repo.DeleteSuperHero(hero);
-                return Ok(_mapper.Map<List<SuperHeroReadDTO>>(heroes));
+                return _mapper.Map<List<SuperHeroReadDTO>>(heroes);
             }
             {
                 return BadRequest("Hero not found");
